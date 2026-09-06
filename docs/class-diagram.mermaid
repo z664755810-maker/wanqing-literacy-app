@@ -1,0 +1,165 @@
+classDiagram
+    %% 晚晴识字 · 核心类图（V1.0 / V1.1）
+
+    class CharCard {
+        +String char
+        +String pinyin
+        +String meaning
+        +List~String~ words
+        +String sentence
+        +String picFile
+        +List~String~ strokeNames
+        +int lessonId
+        +String category
+        +hasPic() bool
+        +fromJson(Map j) CharCard$
+    }
+
+    class Lesson {
+        +int id
+        +String title
+        +List~String~ chars
+        +contains(String c) bool
+    }
+
+    class Sentence {
+        +String text
+        +String meaning
+        +List~String~ chars
+        +int minLesson
+        +coveredBy(Set learned) bool
+    }
+
+    class ProgressEntry {
+        +String char
+        +String firstLearnedDay
+        +String lastReviewDay
+        +int stage
+        +int reviewCount
+        +int lapses
+        +isGraduated() bool
+        +toJson() Map
+        +fromJson(Map j) ProgressEntry$
+    }
+
+    class AppSettings {
+        +double fontScale
+        +double speechRate
+        +double buttonScale
+        +bool showPinyin
+        +save() Future
+        +load() AppSettings$
+    }
+
+    class Store {
+        -SharedPreferences sp
+        +init() Future$
+        +getString(String k) String
+        +setString(String k, String v) Future
+        +clearAll() Future
+    }
+
+    class ProgressService {
+        -Map entries
+        -int unlockedLesson
+        +learnedCount() int
+        +todayNewCount() int
+        +learnedChars() Set
+        +isLearned(String c) bool
+        +markLearned(String c) Future
+        +advanceLesson(int id) Future
+        +resetAll() Future
+        +load() Future
+        +persist() Future
+    }
+
+    class ReviewService {
+        +int[] intervals$
+        +dueToday(ProgressService p) List$
+        +buildQueue(ProgressService p, int limit) List$
+        +manualPool(ProgressService p) List$
+        +recordResult(String c, bool ok, ProgressService p) Future$
+    }
+
+    class TtsService {
+        -FlutterTts tts
+        +init() Future
+        +speakChar(String c) Future
+        +speakWord(String w) Future
+        +speakSentence(String s) Future
+        +stop() Future
+        -_assertChinese(String t) void
+    }
+
+    class StrokeData {
+        -Map strokeMap
+        -Map medianMap
+        +load() Future$
+        +strokesOf(String c) List
+        +mediansOf(String c) List
+        +has(String c) bool
+    }
+
+    class AppState {
+        +ProgressService progress
+        +AppSettings settings
+        +int dueCount
+        +init() Future
+        +updateSettings(AppSettings s) Future
+        +resetProgress() Future
+        +refreshDue() void
+    }
+
+    class StrokeAnimator {
+        +String char
+        +bool playing
+        +play() void
+        +replay() void
+    }
+
+    class TracingPad {
+        +String guideChar
+        +clear() void
+        +undo() void
+        +erase() void
+    }
+
+    class HomeScreen {
+        +build(ctx) Widget
+    }
+    class LessonScreen {
+        +int lessonId
+    }
+    class CharDetailScreen {
+        +String char
+    }
+    class PracticeScreen {
+        +List chars
+        +String mode
+    }
+    class ReviewScreen
+    class ReadScreen
+    class SettingsScreen
+
+    AppState *-- ProgressService : owns
+    AppState *-- AppSettings : holds
+    ProgressService o-- ProgressEntry : manages
+    ProgressService --> Store : persists via
+    AppSettings --> Store : saves via
+    ReviewService ..> ProgressService : reads and writes
+    ReviewService ..> ProgressEntry : mutates stage
+    StrokeAnimator ..> StrokeData : reads svg paths
+    TracingPad ..> StrokeData : guide strokes
+    LessonScreen ..> ProgressService : markLearned
+    LessonScreen ..> CharCard : renders
+    CharDetailScreen ..> CharCard : renders
+    CharDetailScreen ..> TtsService : speakChar
+    CharDetailScreen ..> StrokeAnimator : hosts
+    PracticeScreen ..> TtsService : speakChar
+    PracticeScreen ..> CharCard : option source
+    ReviewScreen ..> ReviewService : buildQueue
+    ReadScreen ..> Sentence : filters by learned
+    SettingsScreen ..> AppState : updateSettings
+    HomeScreen ..> AppState : listens
+    Lesson o-- CharCard : groups 2-3 chars
+    Sentence ..> CharCard : composed of learned chars

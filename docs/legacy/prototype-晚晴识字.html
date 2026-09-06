@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>晚晴识字 · 成人汉字拼音课堂（原型 v3）</title>
+<style>
+  :root{
+    --paper:#F4EEDF;        /* 宣纸底 */
+    --paper2:#EFE7D4;
+    --ink:#26221C;          /* 墨色 */
+    --ink2:#4A4338;
+    --dai:#2F5D62;          /* 黛青 */
+    --dai2:#3C7378;
+    --zhe:#A85E2E;          /* 赭石 */
+    --zhe2:#C07A3F;
+    --seal:#9E3B2E;         /* 朱印（克制使用） */
+    --line:#D8CDB4;
+    --shadow:0 6px 20px rgba(40,34,28,.12);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(135deg,#F6F0E2,#EFE7D4);
+    color:var(--ink);
+    line-height:1.7;
+  }
+  .serif{font-family:"Songti SC","SimSun","STSong",serif}
+  /* 顶栏 */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:14px;
+    padding:14px 22px;
+    background:rgba(244,238,223,.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{font-family:"Songti SC","SimSun",serif;font-size:26px;font-weight:700;color:var(--ink);letter-spacing:4px}
+  .logo small{display:block;font-size:11px;letter-spacing:2px;color:var(--zhe);font-weight:400;margin-top:2px}
+  .streak{margin-left:auto;display:flex;gap:18px;align-items:center;font-size:13px;color:var(--ink2)}
+  .streak b{color:var(--dai);font-size:16px}
+  .nav{
+    display:flex;gap:6px;padding:10px 16px;flex-wrap:wrap;
+    background:var(--paper2);border-bottom:1px solid var(--line);
+    position:sticky;top:62px;z-index:19;
+  }
+  .nav button{
+    flex:1;min-width:84px;
+    padding:10px 6px;border:1px solid var(--line);border-radius:10px;
+    background:transparent;color:var(--ink2);font-size:15px;cursor:pointer;
+    font-family:"Songti SC","SimSun",serif;letter-spacing:2px;transition:.2s;
+  }
+  .nav button.active{background:var(--dai);color:#fff;border-color:var(--dai)}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 18px 60px}
+  .screen{display:none;animation:fade .3s}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2.sec{font-family:"Songti SC","SimSun",serif;font-size:22px;letter-spacing:3px;margin:6px 0 4px;color:var(--ink)}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 18px}
+  /* 首页 */
+  .hero{
+    background:var(--paper);border:1px solid var(--line);border-radius:16px;
+    padding:26px;box-shadow:var(--shadow);text-align:center;
+  }
+  .hero .big{font-family:"Songti SC","SimSun",serif;font-size:64px;color:var(--dai);letter-spacing:10px;margin:8px 0}
+  .hero p{font-size:15px;color:var(--ink2);max-width:620px;margin:8px auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:22px}
+  .card{
+    background:var(--paper);border:1px solid var(--line);border-radius:14px;
+    padding:18px;cursor:pointer;box-shadow:var(--shadow);transition:.2s;text-align:left;
+  }
+  .card:hover{transform:translateY(-3px);border-color:var(--dai)}
+  .card .t{font-family:"Songti SC","SimSun",serif;font-size:20px;color:var(--ink);letter-spacing:2px}
+  .card .d{font-size:13px;color:var(--ink2);margin-top:6px}
+  /* 子标签 */
+  .tabs{display:flex;gap:8px;margin:8px 0 18px;flex-wrap:wrap}
+  .tabs button{
+    padding:9px 16px;border:1px solid var(--line);border-radius:20px;background:#fff;
+    color:var(--ink2);cursor:pointer;font-size:14px;font-family:"Songti SC","SimSun",serif;letter-spacing:2px;
+  }
+  .tabs button.active{background:var(--zhe);color:#fff;border-color:var(--zhe)}
+  /* 拼音格 */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px}
+  .cell{
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;
+    padding:14px 8px;text-align:center;cursor:pointer;transition:.15s;position:relative;
+  }
+  .cell:hover{box-shadow:var(--shadow);border-color:var(--dai)}
+  .cell .py{font-family:"Songti SC","SimSun",serif;font-size:30px;color:var(--ink)}
+  .cell .ex{font-size:14px;color:var(--ink2);margin-top:4px}
+  .cell .word{font-size:12px;color:var(--zhe);margin-top:2px}
+  .cell .play{
+    position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
+    background:var(--dai);color:#fff;font-size:12px;line-height:24px;border:none;cursor:pointer;
+  }
+  .cell .tag{position:absolute;top:6px;left:6px;font-size:10px;color:var(--seal);background:#fff;border:1px solid var(--line);border-radius:6px;padding:0 4px}
+  /* 小课堂 */
+  .lesson{
+    background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--zhe);
+    border-radius:12px;padding:20px 22px;box-shadow:var(--shadow);margin-bottom:16px;
+  }
+  .lesson h3{font-family:"Songti SC","SimSun",serif;font-size:19px;margin:0 0 8px;color:var(--ink);letter-spacing:2px}
+  .lesson p{font-size:15px;color:var(--ink2);margin:8px 0}
+  .lesson .exa{background:#fff;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:15px}
+  .lesson .exa b{color:var(--dai);font-family:"Songti SC","SimSun",serif}
+  /* 声调条 */
+  .tonerow{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .tone{
+    flex:1;min-width:130px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:14px;cursor:pointer;text-align:center;transition:.15s;
+  }
+  .tone:hover{box-shadow:var(--shadow);border-color:var(--dai)}
+  .tone .mark{font-size:34px;color:var(--zhe);font-family:"Songti SC","SimSun",serif}
+  .tone .name{font-size:15px;color:var(--ink)}
+  .tone .desc{font-size:12px;color:var(--ink2)}
+  /* 汉字分类 */
+  .cat{margin-bottom:18px}
+  .cat h3{font-family:"Songti SC","SimSun",serif;font-size:18px;color:var(--dai);letter-spacing:2px;margin:0 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .cat .chips{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{
+    width:64px;height:64px;border-radius:12px;border:1px solid var(--line);background:var(--paper);
+    font-family:"Songti SC","SimSun",serif;font-size:30px;color:var(--ink);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.15s;
+  }
+  .chip:hover{box-shadow:var(--shadow);border-color:var(--zhe);color:var(--zhe)}
+  /* 汉字详情弹层 */
+  .modal{position:fixed;inset:0;background:rgba(38,34,28,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .modal.show{display:flex}
+  .sheet{
+    background:var(--paper);max-width:520px;width:100%;border-radius:18px;padding:24px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto;
+  }
+  .sheet .bigchar{font-family:"Songti SC","SimSun",serif;font-size:96px;text-align:center;color:var(--ink);line-height:1.1}
+  .sheet .pinyin{text-align:center;font-size:24px;color:var(--dai);letter-spacing:2px;margin:4px 0}
+  .sheet .rows{margin-top:14px}
+  .sheet .row{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:15px}
+  .sheet .row .k{color:var(--zhe);min-width:54px;font-family:"Songti SC","SimSun",serif}
+  .sheet .row .v{color:var(--ink2)}
+  .sheet .btns{display:flex;gap:10px;margin-top:18px}
+  .sheet .btns button{flex:1;padding:12px;border-radius:10px;border:1px solid var(--line);cursor:pointer;font-size:15px}
+  .btn-dai{background:var(--dai);color:#fff;border-color:var(--dai)!important}
+  .btn-zhe{background:var(--zhe);color:#fff;border-color:var(--zhe)!important}
+  .btn-ghost{background:#fff;color:var(--ink2)}
+  #hwTarget{width:200px;height:200px;background:#fff;border:1px solid var(--line);border-radius:10px;margin:10px auto;touch-action:none}
+  /* 阅读 */
+  .story{
+    background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px;
+    box-shadow:var(--shadow);margin-bottom:16px;cursor:pointer;transition:.2s;
+  }
+  .story:hover{transform:translateY(-2px);border-color:var(--dai)}
+  .story .ttl{font-family:"Songti SC","SimSun",serif;font-size:20px;color:var(--ink);letter-spacing:2px}
+  .story .meta{font-size:12px;color:var(--zhe);margin:2px 0 10px}
+  .story .prev{font-size:15px;color:var(--ink2);max-height:64px;overflow:hidden}
+  .known{color:var(--dai);background:#E7E0CC;border-radius:4px;padding:0 1px;font-weight:700}
+  .readview{padding:6px}
+  .readview .body{font-family:"Songti SC","SimSun",serif;font-size:22px;line-height:2.2;color:var(--ink);letter-spacing:1px}
+  .readview .body .known{cursor:pointer}
+  /* 复习 / 测验 */
+  .quiz{
+    background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:24px;
+    box-shadow:var(--shadow);text-align:center;
+  }
+  .quiz .ask{font-size:15px;color:var(--ink2);margin-bottom:6px}
+  .quiz .sound{
+    width:80px;height:80px;border-radius:50%;background:var(--dai);color:#fff;border:none;
+    font-size:30px;cursor:pointer;margin:8px auto 18px;display:block;
+  }
+  .quiz .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .quiz .opt{
+    padding:22px;font-family:"Songti SC","SimSun",serif;font-size:40px;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:14px;cursor:pointer;transition:.15s;
+  }
+  .quiz .opt:hover{border-color:var(--dai)}
+  .quiz .opt.ok{background:#E3EEDC;border-color:var(--dai);color:var(--dai)}
+  .quiz .opt.no{background:#F3E0DC;border-color:var(--seal);color:var(--seal)}
+  .feedback{margin-top:14px;font-size:16px;min-height:24px}
+  .review-item{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .review-item .c{font-family:"Songti SC","SimSun",serif;font-size:34px;color:var(--ink);width:48px;text-align:center}
+  .review-item .info{flex:1;font-size:13px;color:var(--ink2)}
+  .review-item .act{display:flex;gap:6px}
+  .review-item .act button{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:13px}
+  .review-item .act .y{color:var(--dai);border-color:var(--dai)}
+  .review-item .act .n{color:var(--seal);border-color:var(--seal)}
+  .muted{color:var(--ink2);font-size:13px}
+  .seal-stamp{display:inline-block;color:var(--seal);border:2px solid var(--seal);border-radius:8px;padding:2px 8px;font-family:"Songti SC","SimSun",serif;font-size:13px;transform:rotate(-6deg)}
+  .tip{background:#FBF6E9;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink2);margin:10px 0}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">晚晴识字<small>成人汉字 · 拼音课堂</small></div>
+  <div class="streak">
+    <span>今日已学 <b id="todayN">3</b> 字</span>
+    <span>连续 <b id="streakN">7</b> 天</span>
+  </div>
+</div>
+<div class="nav" id="nav">
+  <button data-s="home" class="active">首页</button>
+  <button data-s="pinyin">拼音</button>
+  <button data-s="hanzi">汉字</button>
+  <button data-s="read">阅读</button>
+  <button data-s="review">复习</button>
+</div>
+
+<div class="wrap">
+
+  <!-- 首页 -->
+  <section class="screen active" id="home">
+    <div class="hero">
+      <div class="muted serif">人 间 重 晚 晴</div>
+      <div class="big serif">晚晴识字</div>
+      <p>这是一间安静的课堂，专为您母亲而设。不急、不考、不用跟小孩一样。</p>
+      <p>从拼音的用处学起，再到生活里的汉字、故事里的字句，每天一小课，慢慢就熟了。</p>
+    </div>
+    <div class="cards">
+      <div class="card" onclick="go('pinyin')"><div class="t">拼音小课堂</div><div class="d">先懂拼音是什么、为什么学，再学声母韵母声调</div></div>
+      <div class="card" onclick="go('hanzi')"><div class="t">汉字课堂</div><div class="d">系统课程 + 二十四节气 / 神仙民俗 / 老家河南</div></div>
+      <div class="card" onclick="go('read')"><div class="t">每日阅读</div><div class="d">烧香、念佛、过年、老家——字从生活里来</div></div>
+      <div class="card" onclick="go('review')"><div class="t">复习巩固</div><div class="d">听音辨字 · 手写温习 · 按时提醒</div></div>
+    </div>
+    <div class="tip">提示：本原型用浏览器自带中文朗读，正式版会内置更自然、更像真人老师的发音音频；声母（如 zh）点击后播放的是真实音节示例，不会被拆成字母念。</div>
+  </section>
+
+  <!-- 拼音 -->
+  <section class="screen" id="pinyin">
+    <div class="tabs" id="pyTabs">
+      <button data-t="class" class="active">拼音小课堂</button>
+      <button data-t="sheng">声母</button>
+      <button data-t="yun">韵母</button>
+      <button data-t="tone">声调</button>
+    </div>
+    <div id="pyClass" class="pytab active"></div>
+    <div id="pySheng" class="pytab" style="display:none"><div class="grid" id="shengGrid"></div></div>
+    <div id="pyYun" class="pytab" style="display:none"><div class="grid" id="yunGrid"></div></div>
+    <div id="pyTone" class="pytab" style="display:none">
+      <p class="sub">同一个音，声调不同，意思就完全不同。点任意一条听一听。</p>
+      <div class="tonerow" id="toneRow"></div>
+      <div class="lesson" style="margin-top:18px">
+        <h3>声调小实验</h3>
+        <p>“妈、麻、马、骂”四个字，拼音字母一样，只是声调不同：</p>
+        <div class="exa"><b>妈</b> mā（一声，高平）　<b>麻</b> má（二声，上扬）　<b>马</b> mǎ（三声，拐弯）　<b>骂</b> mà（四声，下压）</div>
+        <p class="muted">所以学拼音，声调一定要一起学，否则字就念错了。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 汉字 -->
+  <section class="screen" id="hanzi">
+    <h2 class="sec">汉字课堂</h2>
+    <p class="sub">系统课程按主题循序渐进；文化分类按兴趣主动学。点任意字看读音、笔顺、释义与例句。</p>
+    <div class="tabs" id="hzTabs">
+      <button data-t="sys" class="active">系统课程</button>
+      <button data-t="cul">文化分类</button>
+      <button data-t="fav">我的收藏</button>
+    </div>
+    <div id="hzSys" class="hztab active"></div>
+    <div id="hzCul" class="hztab" style="display:none"></div>
+    <div id="hzFav" class="hztab" style="display:none"></div>
+  </section>
+
+  <!-- 阅读 -->
+  <section class="screen" id="read">
+    <h2 class="sec">每日阅读</h2>
+    <p class="sub">把已学的字（蓝色）串进生活故事里。整篇朗读，点蓝字可查。</p>
+    <div id="storyList"></div>
+  </section>
+
+  <!-- 复习 -->
+  <section class="screen" id="review">
+    <h2 class="sec">复习巩固</h2>
+    <p class="sub">两种复习法：听音辨字（考耳朵）、手写温习（考手与眼）。都按“记不住就多来几次”安排。</p>
+    <div class="tabs" id="rvTabs">
+      <button data-t="quiz" class="active">听音辨字</button>
+      <button data-t="list">待复习</button>
+    </div>
+    <div id="rvQuiz" class="rvtab active"></div>
+    <div id="rvList" class="rvtab" style="display:none"></div>
+  </section>
+
+</div>
+
+<!-- 汉字详情 -->
+<div class="modal" id="modal">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+<script>
+/* ============ 语音 ============ */
+let voices=[];
+function loadVoices(){voices=speechSynthesis.getVoices()||[]}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
+function speak(text){
+  if(!('speechSynthesis' in window)||!text) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='zh-CN';u.rate=0.65;u.pitch=1.0;
+  const v=voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('zh'));
+  if(v)u.voice=v;
+  speechSynthesis.speak(u);
+}
+
+/* ============ 数据：拼音 ============ */
+// 声母：sound 为真实音节示例，避免被按字母拼读
+const SHENGMU=[
+  {b:'b',ex:'八',py:'bā',word:'爸爸 bàba',sound:'bā'},
+  {b:'p',ex:'爬',py:'pá',word:'朋友 péngyou',sound:'pá'},
+  {b:'m',ex:'妈',py:'mā',word:'妈妈 māma',sound:'mā'},
+  {b:'f',ex:'发',py:'fā',word:'福气 fúqi',sound:'fā'},
+  {b:'d',ex:'大',py:'dà',word:'大家 dàjiā',sound:'dà'},
+  {b:'t',ex:'他',py:'tā',word:'太阳 tàiyang',sound:'tā'},
+  {b:'n',ex:'那',py:'nà',word:'哪里 nǎli',sound:'nà'},
+  {b:'l',ex:'来',py:'lái',word:'老天 lǎotiān',sound:'lái'},
+  {b:'g',ex:'哥',py:'gē',word:'高兴 gāoxìng',sound:'gē'},
+  {b:'k',ex:'开',py:'kāi',word:'开心 kāixīn',sound:'kāi'},
+  {b:'h',ex:'好',py:'hǎo',word:'好处 hǎochu',sound:'hǎo'},
+  {b:'j',ex:'鸡',py:'jī',word:'吉祥 jíxiáng',sound:'jī'},
+  {b:'q',ex:'七',py:'qī',word:'亲戚 qīnqi',sound:'qī'},
+  {b:'x',ex:'西',py:'xī',word:'希望 xīwàng',sound:'xī'},
+  {b:'zh',ex:'知',py:'zhī',word:'知道 zhīdào',sound:'zhī',warn:'注意：zh 是“知”的开头，不是 z 和 h 两个字母'},
+  {b:'ch',ex:'吃',py:'chī',word:'出门 chūmén',sound:'chī',warn:'ch 是“吃”的开头，一个音，不是 c 和 h'},
+  {b:'sh',ex:'是',py:'shì',word:'事情 shìqing',sound:'shì',warn:'sh 是“是”的开头，一个音，不是 s 和 h'},
+  {b:'r',ex:'日',py:'rì',word:'日子 rìzi',sound:'rì'},
+  {b:'z',ex:'子',py:'zǐ',word:'自在 zìzài',sound:'zǐ'},
+  {b:'c',ex:'才',py:'cái',word:'才能 cáinéng',sound:'cái'},
+  {b:'s',ex:'三',py:'sān',word:'寺庙 sìmiào',sound:'sān'},
+  {b:'y',ex:'一',py:'yī',word:'一样 yīyàng',sound:'yī'},
+  {b:'w',ex:'我',py:'wǒ',word:'我们 wǒmen',sound:'wǒ'},
+];
+const YUNMU=[
+  {b:'a',ex:'啊',py:'ā',word:'妈妈 māma',sound:'ā'},
+  {b:'o',ex:'哦',py:'ò',word:'萝卜 luóbo',sound:'ò'},
+  {b:'e',ex:'饿',py:'è',word:'儿子 érzi',sound:'è'},
+  {b:'i',ex:'衣',py:'yī',word:'意思 yìsi',sound:'yī'},
+  {b:'u',ex:'屋',py:'wū',word:'午饭 wǔfàn',sound:'wū'},
+  {b:'ü',ex:'鱼',py:'yú',word:'下雨 xiàyǔ',sound:'yú'},
+  {b:'ai',ex:'爱',py:'ài',word:'爱人 àirén',sound:'ài'},
+  {b:'ei',ex:'给',py:'gěi',word:'妹妹 mèimei',sound:'gěi'},
+  {b:'ui',ex:'水',py:'shuǐ',word:'喝水 hēshuǐ',sound:'shuǐ'},
+  {b:'ao',ex:'好',py:'hǎo',word:'热闹 rènao',sound:'hǎo'},
+  {b:'ou',ex:'偶',py:'ǒu',word:'朋友 péngyou',sound:'ǒu'},
+  {b:'iu',ex:'牛',py:'niú',word:'牛奶 niúnǎi',sound:'niú'},
+  {b:'ie',ex:'叶',py:'yè',word:'叶子 yèzi',sound:'yè'},
+  {b:'üe',ex:'月',py:'yuè',word:'月亮 yuèliang',sound:'yuè'},
+  {b:'er',ex:'二',py:'èr',word:'儿子 érzi',sound:'èr'},
+  {b:'an',ex:'安',py:'ān',word:'平安 píngān',sound:'ān'},
+  {b:'en',ex:'恩',py:'ēn',word:'本分 běnfèn',sound:'ēn'},
+  {b:'in',ex:'音',py:'yīn',word:'声音 shēngyīn',sound:'yīn'},
+  {b:'un',ex:'温',py:'wēn',word:'温暖 wēnnuǎn',sound:'wēn'},
+  {b:'ün',ex:'云',py:'yún',word:'云彩 yúncai',sound:'yún'},
+  {b:'ang',ex:'昂',py:'áng',word:'帮忙 bāngmáng',sound:'áng'},
+  {b:'eng',ex:'风',py:'fēng',word:'风筝 fēngzheng',sound:'fēng'},
+  {b:'ing',ex:'英',py:'yīng',word:'影儿 yǐngr',sound:'yīng'},
+  {b:'ong',ex:'红',py:'hóng',word:'红灯 hóngdēng',sound:'hóng'},
+];
+const TONES=[
+  {t:'一声',mark:'ˉ',name:'高平',desc:'声音高而平，拉长',ex:'妈 mā',sound:'mā'},
+  {t:'二声',mark:'ˊ',name:'上扬',desc:'声音由低往上扬',ex:'麻 má',sound:'má'},
+  {t:'三声',mark:'ˇ',name:'拐弯',desc:'先降再往上拐',ex:'马 mǎ',sound:'mǎ'},
+  {t:'四声',mark:'ˋ',name:'下压',desc:'用力往下压',ex:'骂 mà',sound:'mà'},
+  {t:'轻声',mark:'˙',name:'轻短',desc:'又轻又短',ex:'吗 ma',sound:'ma'},
+];
+
+/* ============ 数据：汉字 ============ */
+// 每个字：py 拼音（带声调）, mean 释义, ex 例词, sent 例句
+const CHARS={
+  '一':{py:'yī',mean:'数目，最小的正整数',ex:'一个、第一',sent:'一天一天，慢慢就熟了。'},
+  '二':{py:'èr',mean:'数目，一加一',ex:'二月、第二',sent:'二月里来是新春。'},
+  '三':{py:'sān',mean:'数目',ex:'三年、三思',sent:'三年不怕慢，就怕站。'},
+  '十':{py:'shí',mean:'数目， ten',ex:'十个、十分',sent:'十分欢喜。'},
+  '百':{py:'bǎi',mean:'数目，十个十',ex:'百年、百姓',sent:'百善孝为先。'},
+  '年':{py:'nián',mean:'时间单位，岁',ex:'过年、年年',sent:'年年有余。'},
+  '月':{py:'yuè',mean:'月亮；月份',ex:'月亮、正月',sent:'十五的月亮圆又圆。'},
+  '日':{py:'rì',mean:'太阳；天',ex:'日子、今日',sent:'今日事今日毕。'},
+  '早':{py:'zǎo',mean:'清早，时间靠前',ex:'早起、早饭',sent:'早起三光，晚起三慌。'},
+  '晚':{py:'wǎn',mean:'傍晚，时间靠后',ex:'晚上、晚年',sent:'人间重晚晴。'},
+  '春':{py:'chūn',mean:'春季，一年开头',ex:'春天、立春',sent:'春种一粒粟。'},
+  '夏':{py:'xià',mean:'夏季',ex:'夏天、立夏',sent:'夏日长，心要静。'},
+  '秋':{py:'qiū',mean:'秋季',ex:'秋天、立秋',sent:'秋天是丰收的季节。'},
+  '冬':{py:'dōng',mean:'冬季',ex:'冬天、立冬',sent:'冬藏，是把力气收起来。'},
+  '我':{py:'wǒ',mean:'自称',ex:'我们、自我',sent:'我慢慢学，不着急。'},
+  '你':{py:'nǐ',mean:'第二人称',ex:'你们、你好',sent:'你好，今天也辛苦了。'},
+  '他':{py:'tā',mean:'第三人称（男）',ex:'他们',sent:'他在地里干活。'},
+  '她':{py:'tā',mean:'第三人称（女）',ex:'她们',sent:'她信佛，心善。'},
+  '们':{py:'men',mean:'表示复数',ex:'我们、你们',sent:'咱们一起学。'},
+  '口':{py:'kǒu',mean:'嘴；家人单位',ex:'门口、一口',sent:'家里五口人。'},
+  '手':{py:'shǒu',mean:'人体上肢前端',ex:'双手、手艺',sent:'自己的手最靠得住。'},
+  '心':{py:'xīn',mean:'心脏；心思',ex:'心善、安心',sent:'心善的人有福。'},
+  '头':{py:'tóu',mean:'脑袋',ex:'头疼、头上',sent:'头疼了就歇歇。'},
+  '眼':{py:'yǎn',mean:'眼睛',ex:'眼泪、眼前',sent:'眼前亮堂，心里也亮堂。'},
+  '耳':{py:'ěr',mean:'耳朵',ex:'耳朵、耳目',sent:'耳听八方，心要静。'},
+  '天':{py:'tiān',mean:'天空；日子',ex:'天气、天生',sent:'天有不测风云。'},
+  '地':{py:'dì',mean:'土地；地面',ex:'地里、心地',sent:'地里的庄稼要人管。'},
+  '山':{py:'shān',mean:'高起的土地',ex:'山上、高山',sent:'靠山山会倒，靠人不如靠己。'},
+  '水':{py:'shuǐ',mean:'无色液体',ex:'喝水、流水',sent:'流水不腐。'},
+  '火':{py:'huǒ',mean:'燃烧的现象',ex:'火上、红火',sent:'日子越过越红火。'},
+  '风':{py:'fēng',mean:'空气流动',ex:'风雨、顺风',sent:'风调雨顺是好年景。'},
+  '雨':{py:'yǔ',mean:'从云落下的水',ex:'下雨、雨水',sent:'好雨知时节。'},
+  '田':{py:'tián',mean:'种庄稼的地',ex:'田地、田园',sent:'田要亲自种才知辛苦。'},
+  '土':{py:'tǔ',mean:'泥土',ex:'土地、乡土',sent:'乡土难离。'},
+  '木':{py:'mù',mean:'树；木头',ex:'木头、草木',sent:'十年树木，百年树人。'},
+  '花':{py:'huā',mean:'植物的繁殖器官',ex:'花开、花钱',sent:'花开富贵。'},
+  '草':{py:'cǎo',mean:'草本植物',ex:'草木、小草',sent:'野火烧不尽，春风吹又生。'},
+  '树':{py:'shù',mean:'木本植物',ex:'大树、树立',sent:'树大根深。'},
+  '父':{py:'fù',mean:'父亲',ex:'父母、父子',sent:'父爱如山。'},
+  '母':{py:'mǔ',mean:'母亲',ex:'母亲、父母',sent:'母爱无边。'},
+  '儿':{py:'ér',mean:'孩子',ex:'儿女、儿子',sent:'儿女是父母的心头肉。'},
+  '女':{py:'nǚ',mean:'女性',ex:'女儿、女人',sent:'女人撑起半边天。'},
+  '兄':{py:'xiōng',mean:'哥哥',ex:'兄弟、兄长',sent:'兄弟同心，其利断金。'},
+  '弟':{py:'dì',mean:'弟弟',ex:'弟弟、兄弟',sent:'兄弟和睦家业兴。'},
+  '姐':{py:'jiě',mean:'姐姐',ex:'姐妹、姐姐',sent:'姐妹情深。'},
+  '妹':{py:'mèi',mean:'妹妹',ex:'妹妹、姐妹',sent:'妹妹听话又乖巧。'},
+  '家':{py:'jiā',mean:'家庭；住所',ex:'家人、回家',sent:'家有一老，如有一宝。'},
+  '亲':{py:'qīn',mean:'亲人；近',ex:'亲人、亲切',sent:'亲戚要走才亲。'},
+  '东':{py:'dōng',mean:'方向，日出处',ex:'东西、东风',sent:'紫气东来。'},
+  '西':{py:'xī',mean:'方向，日落处',ex:'东西、西方',sent:'东西南北，先认清家。'},
+  '南':{py:'nán',mean:'方向',ex:'南方、河南',sent:'南方湿热，北方干冷。'},
+  '北':{py:'běi',mean:'方向',ex:'北方、北京',sent:'败北，就是往北退。'},
+  '上':{py:'shàng',mean:'位置高',ex:'上面、上山',sent:'上善若水。'},
+  '下':{py:'xià',mean:'位置低',ex:'下面、下乡',sent:'下学回来帮把手。'},
+  '中':{py:'zhōng',mean:'里面；中间',ex:'中国、心中',sent:'中原大地，是咱老家。'},
+  '里':{py:'lǐ',mean:'里面；长度',ex:'家里、村里',sent:'村里人都实在。'},
+  '外':{py:'wài',mean:'外面',ex:'门外、外头',sent:'外头风大，添件衣。'},
+  '前':{py:'qián',mean:'面对的方向',ex:'前面、从前',sent:'前头有路。'},
+  '后':{py:'hòu',mean:'背对的方向',ex:'后面、以后',sent:'以后慢慢学。'},
+  // 文化：二十四节气
+  '立':{py:'lì',mean:'开始；站',ex:'立春、立夏',sent:'立春，是春天的开始。'},
+  '分':{py:'fēn',mean:'分开；一半',ex:'春分、秋分',sent:'春分昼夜平分。'},
+  '至':{py:'zhì',mean:'到；极',ex:'夏至、冬至',sent:'夏至，白天最长。'},
+  '雪':{py:'xuě',mean:'空中落下的白花',ex:'下雪、大雪',sent:'瑞雪兆丰年。'},
+  '霜':{py:'shuāng',mean:'近地的水汽凝成',ex:'霜降、冰霜',sent:'霜降之后天更冷。'},
+  '露':{py:'lù',mean:'近地的河水珠',ex:'白露、露水',sent:'白露秋分夜，一夜凉一夜。'},
+  '寒':{py:'hán',mean:'冷',ex:'寒冷、大寒',sent:'大寒是一年最冷时。'},
+  '暖':{py:'nuǎn',mean:'温和',ex:'温暖、暖和',sent:'屋里暖和，心也安。'},
+  // 文化：传统节日
+  '节':{py:'jié',mean:'节日；节省',ex:'过节、春节',sent:'过节一家人团圆。'},
+  '元':{py:'yuán',mean:'开始；第一',ex:'元宵、元旦',sent:'元宵灯圆人圆。'},
+  '宵':{py:'xiāo',mean:'夜',ex:'元宵、通宵',sent:'元宵夜里看花灯。'},
+  '端':{py:'duān',mean:'正；开头',ex:'端午、端正',sent:'端午吃粽子。'},
+  '午':{py:'wǔ',mean:'地支第七；中午',ex:'端午、中午',sent:'中午太阳正当中。'},
+  '重':{py:'chóng',mean:'再；层',ex:'重阳、重复',sent:'重阳登高望远。'},
+  '阳':{py:'yáng',mean:'太阳；男',ex:'阳光、重阳',sent:'阳光照进屋里。'},
+  '腊':{py:'là',mean:'岁末',ex:'腊八、腊月',sent:'腊八粥，暖到心里。'},
+  '八':{py:'bā',mean:'数目',ex:'腊八、八月',sent:'腊八过了就是年。'},
+  '除':{py:'chú',mean:'去掉',ex:'除夕、除去',sent:'除夕守岁，旧岁除。'},
+  '夕':{py:'xī',mean:'傍晚；夜',ex:'除夕、七夕',sent:'夕照满山红。'},
+  '灯':{py:'dēng',mean:'照明物',ex:'灯笼、花灯',sent:'正月十五闹花灯。'},
+  '龙':{py:'lóng',mean:'传说神兽',ex:'龙舟、龙王',sent:'龙舟竞渡庆端午。'},
+  '舟':{py:'zhōu',mean:'船',ex:'龙舟、小舟',sent:'轻舟已过万重山。'},
+  // 文化：神仙民俗（信神佛、烧香）
+  '佛':{py:'fó',mean:'觉者；佛教',ex:'佛祖、拜佛',sent:'她信佛，心常安宁。'},
+  '神':{py:'shén',mean:'天地精灵；精神',ex:'神仙、心神',sent:'心诚则灵。'},
+  '仙':{py:'xiān',mean:'长生不老的人',ex:'神仙、仙境',sent:'神仙传说，听着欢喜。'},
+  '财':{py:'cái',mean:'钱物',ex:'财神、发财',sent:'财神到，好运来。'},
+  '福':{py:'fú',mean:'好运气',ex:'福气、福字',sent:'福到了，贴上门。'},
+  '禄':{py:'lù',mean:'俸禄；福分',ex:'福禄、功禄',sent:'福禄双全。'},
+  '寿':{py:'shòu',mean:'长命',ex:'长寿、寿星',sent:'寿比南山。'},
+  '喜':{py:'xǐ',mean:'快乐',ex:'欢喜、喜事',sent:'双喜临门。'},
+  '灶':{py:'zào',mean:'生火做饭处',ex:'灶王、灶台',sent:'二十三，灶王上天言好事。'},
+  '香':{py:'xiāng',mean:'供佛的香料',ex:'烧香、香火',sent:'初一十五烧一炷香。'},
+  '庙':{py:'miào',mean:'供奉神佛的处所',ex:'庙里、庙会',sent:'庙里香火很旺。'},
+  '经':{py:'jīng',mean:'佛道典籍',ex:'经书、念经',sent:'她常念经，心静。'},
+  '善':{py:'shàn',mean:'好；善良',ex:'行善、心善',sent:'善有善报。'},
+  '拜':{py:'bài',mean:'行礼',ex:'拜佛、拜年',sent:'进门先拜一拜。'},
+  '观':{py:'guān',mean:'看；观世音',ex:'观音、观看',sent:'观音菩萨救苦救难。'},
+  '音':{py:'yīn',mean:'声音',ex:'观音、声音',sent:'南无观世音。'},
+  '菩':{py:'pú',mean:'菩提；觉',ex:'菩萨',sent:'菩萨低眉，慈悲为怀。'},
+  '萨':{py:'sà',mean:'菩萨',ex:'菩萨',sent:'菩萨保佑平安。'},
+  '道':{py:'dào',mean:'路；道理；道教',ex:'道理、道教',sent:'道法自然。'},
+  '德':{py:'dé',mean:'品行',ex:'德行、功德',sent:'积德行善。'},
+  '吉':{py:'jí',mean:'好；顺',ex:'吉祥、吉利',sent:'吉祥如意。'},
+  '祥':{py:'xiáng',mean:'吉利',ex:'祥和、吉祥',sent:'祥云绕屋。'},
+  '平':{py:'píng',mean:'安定',ex:'平安、太平',sent:'平安是福。'},
+  '安':{py:'ān',mean:'安稳',ex:'平安、安心',sent:'心安即是家。'},
+  // 文化：老家河南
+  '河':{py:'hé',mean:'大河',ex:'黄河、河南',sent:'黄河是咱母亲河。'},
+  '南':{py:'nán',mean:'方向；南方',ex:'河南、南方',sent:'河南，是中州大地。'},
+  '黄':{py:'huáng',mean:'颜色；黄帝',ex:'黄河、黄土',sent:'黄土里长出了庄稼。'},
+  '嵩':{py:'sōng',mean:'高山',ex:'嵩山',sent:'嵩山少林，天下闻名。'},
+  '洛':{py:'luò',mean:'水名',ex:'洛阳、洛水',sent:'洛阳牡丹甲天下。'},
+  '阳':{py:'yáng',mean:'太阳',ex:'洛阳、太阳',sent:'太阳出来喜洋洋。'},
+  '豫':{py:'yù',mean:'河南简称',ex:'豫剧、豫州',sent:'豫剧唱的是咱乡音。'},
+  '州':{py:'zhōu',mean:'地名用字',ex:'九州、中州',sent:'中州，是河南的古称。'},
+  '原':{py:'yuán',mean:'平地；本来的',ex:'中原、原野',sent:'中原厚土养后人。'},
+  '华':{py:'huá',mean:'中华；花',ex:'中华、华夏',sent:'华夏子孙。'},
+  '夏':{py:'xià',mean:'夏季；华夏',ex:'华夏、立夏',sent:'华夏文明源远流长。'},
+  '商':{py:'shāng',mean:'买卖；朝代',ex:'商都、商量',sent:'商都郑州，买卖兴旺。'},
+  '都':{py:'dū',mean:'首都；大城市',ex:'商都、都城',sent:'郑州自古是商都。'},
+  // 文化：厨房饮食（生活经验）
+  '米':{py:'mǐ',mean:'粮食',ex:'大米、米粥',sent:'米是每天的主食。'},
+  '面':{py:'miàn',mean:'面粉；面条',ex:'面条、面案',sent:'手擀面最香。'},
+  '盐':{py:'yán',mean:'调味品',ex:'咸盐、盐巴',sent:'盐是百味之首。'},
+  '油':{py:'yóu',mean:'食用油',ex:'香油、油锅',sent:'香油拌菜香。'},
+  '茶':{py:'chá',mean:'饮品',ex:'喝茶、茶叶',sent:'闲来喝杯茶。'},
+  '饭':{py:'fàn',mean:'熟食',ex:'吃饭、米饭',sent:'家常饭最养人。'},
+  '菜':{py:'cài',mean:'蔬菜；菜肴',ex:'青菜、做菜',sent:'自己种的菜甜。'},
+  '肉':{py:'ròu',mean:'禽兽的肉',ex:'肉汤、吃肉',sent:'过年才舍得炖肉。'},
+  '汤':{py:'tāng',mean:'带水的食物',ex:'肉汤、汤锅',sent:'热汤暖胃。'},
+  '锅':{py:'guō',mean:'炊具',ex:'铁锅、锅铲',sent:'铁锅炒菜有锅气。'},
+  '碗':{py:'wǎn',mean:'盛食器具',ex:'碗筷、大碗',sent:'碗里装着日子。'},
+  '筷':{py:'kuài',mean:'餐具',ex:'筷子、碗筷',sent:'一双筷子用几十年。'},
+  '勺':{py:'sháo',mean:'舀具',ex:'勺子、汤勺',sent:'汤勺舀汤刚刚好。'},
+  // 补充常用
+  '好':{py:'hǎo',mean:'善；美',ex:'好人、好年',sent:'好人有好报。'},
+  '笑':{py:'xiào',mean:'露出欢喜',ex:'笑容、笑话',sent:'笑一笑，十年少。'},
+  '看':{py:'kàn',mean:'用目',ex:'看见、看戏',sent:'看戏是老乐趣。'},
+  '听':{py:'tīng',mean:'用耳',ex:'听戏、听见',sent:'听戏听的是味儿。'},
+  '说':{py:'shuō',mean:'用口讲',ex:'说话、说书',sent:'说书先生讲古。'},
+  '写':{py:'xiě',mean:'用笔',ex:'写字、写经',sent:'写一手好字。'},
+  '念':{py:'niàn',mean:'读；想',ex:'念经、想念',sent:'她天天念经。'},
+  '明':{py:'míng',mean:'亮；清楚',ex:'明天、明白',sent:'明天会更好。'},
+  '光':{py:'guāng',mean:'亮；荣',ex:'光明、光荣',sent:'光明的日子在前头。'},
+  '顺':{py:'shùn',mean:'通畅',ex:'顺利、顺风',sent:'一帆风顺。'},
+};
+const KNOWN=new Set(Object.keys(CHARS));
+
+const SYS_CATS=[
+  {cat:'数字与时间',list:['一','二','三','十','百','年','月','日','早','晚','春','夏','秋','冬']},
+  {cat:'人称与身体',list:['我','你','他','她','们','口','手','心','头','眼','耳']},
+  {cat:'自然万物',list:['天','地','山','水','火','风','雨','田','土','木','花','草','树']},
+  {cat:'家庭亲朋',list:['父','母','儿','女','兄','弟','姐','妹','家','亲']},
+  {cat:'方向与处所',list:['东','西','南','北','上','下','中','里','外','前','后']},
+];
+const CUL_CATS=[
+  {cat:'二十四节气',list:['春','夏','秋','冬','立','分','至','雨','雪','霜','露','寒','暖']},
+  {cat:'传统节日',list:['节','春','元','宵','端','午','重','阳','腊','八','除','夕','灯','龙','舟']},
+  {cat:'神仙民俗',list:['佛','神','仙','财','福','禄','寿','喜','灶','香','庙','经','善','拜','观','音','菩','萨','道','德','平','安','吉','祥']},
+  {cat:'老家河南',list:['河','南','黄','嵩','洛','阳','豫','州','中','原','华','夏','商','都']},
+  {cat:'厨房饮食',list:['米','面','盐','油','茶','饭','菜','肉','汤','锅','碗','筷','勺']},
+];
+
+/* ============ 数据：阅读 ============ */
+const STORIES=[
+  {title:'烧一炷香',tag:'神仙民俗',text:'初一十五，她早起烧一炷香。香火升起，心里就安了。她拜一拜，念一声佛，愿一家平安，愿日子红火。心善的人，自有福报。'},
+  {title:'南无阿弥陀佛',tag:'神仙民俗',text:'她常念：南无阿弥陀佛。六个字，念了半生。佛在心头坐，不用远朝山。平日多行善，胜过烧高香。'},
+  {title:'立春·种下希望',tag:'二十四节气',text:'立春到了，风里带暖。田要翻，土要松。一年之计在于春，种下一粒粟，秋来收满仓。春种夏长，秋收冬藏，天地有它的道理。'},
+  {title:'过年回家',tag:'传统节日',text:'腊月里，家里忙。扫尘、贴福、包饺子。除夕夜，一家人围坐，说今年，盼明年。福字倒着贴，意思是福到了。'},
+  {title:'河南老家',tag:'老家河南',text:'老家在河南，黄河边上。中原厚土，养了咱一代代人。嵩山少林，洛阳牡丹，都是乡音里的骄傲。豫剧一开腔，眼泪就下来。'},
+  {title:'好心的财神',tag:'神仙民俗',text:'财神到，好运来。可不是求发财就发财。财神喜的是勤俭人家、善良人家。平日肯帮人，财气自然来。'},
+  {title:'厨房里的学问',tag:'厨房饮食',text:'米面油盐，是过日子的根本。盐是百味之首，油香靠火候。一碗热汤，一双筷子，盛的是家常，暖的是人心。'},
+  {title:'身体的信号',tag:'生活常识',text:'头一疼，就歇歇；眼一累，就闭闭。身子是自己的，要疼它。早睡早起，粗茶淡饭，比什么补药都强。'},
+];
+
+/* ============ 渲染 ============ */
+// 导航
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.s));
+function go(s){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
+  document.querySelectorAll('.screen').forEach(c=>c.classList.remove('active'));
+  document.getElementById(s).classList.add('active');
+  window.scrollTo(0,0);
+}
+// 拼音子标签
+document.querySelectorAll('#pyTabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#pyTabs button').forEach(x=>x.classList.toggle('active',x===b));
+  const t=b.dataset.t;
+  document.getElementById('pyClass').style.display=t==='class'?'block':'none';
+  document.getElementById('pySheng').style.display=t==='sheng'?'block':'none';
+  document.getElementById('pyYun').style.display=t==='yun'?'block':'none';
+  document.getElementById('pyTone').style.display=t==='tone'?'block':'none';
+});
+// 拼音小课堂
+document.getElementById('pyClass').innerHTML=`
+  <div class="lesson">
+    <h3>一、拼音是什么</h3>
+    <p>拼音，是给汉字标“怎么读”的一套字母。汉字本身是方块字，光看样子不知道念什么；拼音就像给每个字配了一行“读音记号”。</p>
+    <div class="exa">比如“妈”字，样子是<strong>妈</strong>，读音记号是 <b>mā</b>。看见 mā，就知道它念“m-ā”。</div>
+  </div>
+  <div class="lesson">
+    <h3>二、为什么值得学</h3>
+    <p>① <b>查字典</b>：遇到不认识的字，按拼音能翻到它。<br>
+       ② <b>用手机打字</b>：很多老人用拼音输入法，会拼音就能发消息。<br>
+       ③ <b>自己读生词</b>：记住拼音，没见过的字也能试着念出来。<br>
+       ④ <b>拼音是汉字的声音</b>：您烧香念的“南无阿弥陀佛”，每个字也有它的拼音——学会了，经书上的字您自己也能读。</p>
+  </div>
+  <div class="lesson">
+    <h3>三、拼音怎么拼成字音</h3>
+    <p>一个字的读音 = <b>声母</b>（开头的音）+ <b>韵母</b>（后面的音）+ <b>声调</b>（高低弯直）。</p>
+    <div class="exa"><b>zh</b>（声母）＋ <b>ī</b>（韵母）＋ 一声 ＝ <b>zhī</b> “知”</div>
+    <p class="muted">注意：zh、ch、sh 是一个整体音，不是把 z 和 h 两个字母分开念。点上面“声母”能看到每个的真实读法。</p>
+  </div>
+  <div class="lesson">
+    <h3>四、声调决定意思</h3>
+    <p>同样的声母韵母，声调一变，字就全变了。这是汉语最奥妙的地方。</p>
+    <div class="exa"><b>妈</b> mā（一声）　<b>麻</b> má（二声）　<b>马</b> mǎ（三声）　<b>骂</b> mà（四声）</div>
+    <p>所以学拼音，请连声调一起记。下面从“声母”开始，一个一个来，不急。</p>
+    <button class="btn-dai" style="padding:10px 18px;border-radius:10px;color:#fff;border:none;cursor:pointer;font-size:15px" onclick="document.querySelector('#pyTabs button[data-t=sheng]').click()">▶ 开始学声母</button>
+  </div>`;
+// 声母格
+document.getElementById('shengGrid').innerHTML=SHENGMU.map((m,i)=>`
+  <div class="cell" onclick="speak('${m.sound}')">
+    <span class="tag">声母</span>
+    <button class="play" onclick="event.stopPropagation();speak('${m.sound}')">▶</button>
+    <div class="py">${m.b}</div>
+    <div class="ex">${m.ex} ${m.py}</div>
+    <div class="word">${m.word}</div>
+  </div>`).join('');
+// 韵母格
+document.getElementById('yunGrid').innerHTML=YUNMU.map(m=>`
+  <div class="cell" onclick="speak('${m.sound}')">
+    <span class="tag">韵母</span>
+    <button class="play" onclick="event.stopPropagation();speak('${m.sound}')">▶</button>
+    <div class="py">${m.b}</div>
+    <div class="ex">${m.ex} ${m.py}</div>
+    <div class="word">${m.word}</div>
+  </div>`).join('');
+// 声调
+document.getElementById('toneRow').innerHTML=TONES.map(t=>`
+  <div class="tone" onclick="speak('${t.sound}')">
+    <div class="mark">${t.mark}</div>
+    <div class="name">${t.t} · ${t.name}</div>
+    <div class="desc">${t.desc}</div>
+    <div style="margin-top:6px;color:var(--dai);font-size:15px">例：${t.ex}</div>
+  </div>`).join('');
+
+// 汉字
+document.querySelectorAll('#hzTabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#hzTabs button').forEach(x=>x.classList.toggle('active',x===b));
+  document.getElementById('hzSys').style.display=b.dataset.t==='sys'?'block':'none';
+  document.getElementById('hzCul').style.display=b.dataset.t==='cul'?'block':'none';
+  document.getElementById('hzFav').style.display=b.dataset.t==='fav'?'block':'none';
+  if(b.dataset.t==='fav')renderFav();
+});
+document.getElementById('hzSys').innerHTML=SYS_CATS.map(c=>`
+  <div class="cat"><h3>${c.cat}</h3><div class="chips">${c.list.map(ch=>`<div class="chip" onclick="openChar('${ch}')">${ch}</div>`).join('')}</div></div>`).join('');
+document.getElementById('hzCul').innerHTML=CUL_CATS.map(c=>`
+  <div class="cat"><h3>${c.cat}</h3><div class="chips">${c.list.map(ch=>`<div class="chip" onclick="openChar('${ch}')">${ch}</div>`).join('')}</div></div>`).join('');
+
+// 汉字详情
+let fav=new Set();
+function openChar(ch){
+  const d=CHARS[ch];if(!d)return;
+  const isFav=fav.has(ch);
+  const html=`
+    <div class="bigchar serif">${ch}</div>
+    <div class="pinyin">${d.py} <button class="play" style="position:static;display:inline-block;vertical-align:middle" onclick="speak('${d.py}')">▶</button></div>
+    <div id="hwBox" style="text-align:center"></div>
+    <div class="rows">
+      <div class="row"><span class="k">释义</span><span class="v">${d.mean}</span></div>
+      <div class="row"><span class="k">例词</span><span class="v">${d.ex}</span></div>
+      <div class="row"><span class="k">例句</span><span class="v">${d.sent}</span></div>
+    </div>
+    <div class="btns">
+      <button class="btn-dai" onclick="speak('${d.py}')">🔊 听读音</button>
+      <button class="${isFav?'btn-zhe':'btn-ghost'}" id="favBtn" onclick="toggleFav('${ch}')">${isFav?'★ 已收藏':'☆ 收藏'}</button>
+    </div>
+    <div class="tip">笔顺动画需联网加载；若离线，正式版将内置本地笔顺数据。点“听读音”可跟读。</div>`;
+  document.getElementById('sheet').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+  // 笔顺动画
+  const box=document.getElementById('hwBox');
+  if(typeof HanziWriter!=='undefined'){
+    box.innerHTML='<div id="hw" style="width:200px;height:200px;margin:auto"></div>';
+    HanziWriter.create('hw',ch,{width:200,height:200,padding:8,strokeColor:'#2F5D62',radicalColor:'#A85E2E',showOutline:true});
+  }else{
+    box.innerHTML='<div class="muted">（笔顺动画需联网加载，离线时见正式版）</div>';
+  }
+}
+function toggleFav(ch){
+  if(fav.has(ch))fav.delete(ch);else fav.add(ch);
+  document.getElementById('favBtn').textContent=fav.has(ch)?'★ 已收藏':'☆ 收藏';
+  document.getElementById('favBtn').className=fav.has(ch)?'btn-zhe':'btn-ghost';
+}
+function renderFav(){
+  const box=document.getElementById('hzFav');
+  if(fav.size===0){box.innerHTML='<p class="muted">还没有收藏。在任意字详情里点“☆ 收藏”，方便随时复习。</p>';return;}
+  box.innerHTML=`<div class="cat"><h3>我的收藏（${fav.size}）</h3><div class="chips">${[...fav].map(ch=>`<div class="chip" onclick="openChar('${ch}')">${ch}</div>`).join('')}</div></div>`;
+}
+document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')document.getElementById('modal').classList.remove('show')};
+
+// 阅读
+document.getElementById('storyList').innerHTML=STORIES.map((s,i)=>{
+  const prev=s.text.slice(0,42).replace(/[一-龥]/g,c=>KNOWN.has(c)?`<span class="known">${c}</span>`:c);
+  return `<div class="story" onclick="openStory(${i})">
+    <div class="ttl serif">${s.title}</div>
+    <div class="meta">${s.tag} · 整篇朗读</div>
+    <div class="prev">${prev}……</div>
+  </div>`;
+}).join('');
+function openStory(i){
+  const s=STORIES[i];
+  const body=s.text.replace(/[一-龥]/g,c=>KNOWN.has(c)?`<span class="known" onclick="event.stopPropagation();openChar('${c}')">${c}</span>`:c);
+  document.getElementById('sheet').innerHTML=`
+    <h2 class="sec" style="margin:0">${s.title}</h2>
+    <div class="meta" style="color:var(--zhe);font-size:12px;margin:2px 0 12px">${s.tag}</div>
+    <div class="readview"><div class="body">${body}</div></div>
+    <div class="btns">
+      <button class="btn-dai" onclick="speak(\`${s.text}\`)">🔊 整篇朗读</button>
+      <button class="btn-ghost" onclick="document.getElementById('modal').classList.remove('show')">关闭</button>
+    </div>
+    <div class="tip">蓝字是已学过的字，点它可看读音与释义。整篇朗读会一句句念，跟着读就好。</div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+// 复习：听音辨字
+const QUIZ_POOL=[...KNOWN];
+let qCur=null;
+function nextQuiz(){
+  const ans=QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
+  const opts=new Set([ans]);
+  while(opts.size<4){const x=QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];if(x!==ans)opts.add(x);}
+  const arr=[...opts].sort(()=>Math.random()-0.5);
+  qCur={ans,opts:arr};
+  document.getElementById('rvQuiz').innerHTML=`
+    <div class="quiz">
+      <div class="ask">听音，选出正确的字（点喇叭可重听）</div>
+      <button class="sound" onclick="speak('${CHARS[ans].py}')">🔊</button>
+      <div class="opts">
+        ${arr.map(c=>`<div class="opt" onclick="answerQuiz('${c}',this)">${c}</div>`).join('')}
+      </div>
+      <div class="feedback" id="qfb"></div>
+      <button class="btn-ghost" style="margin-top:12px;padding:10px 18px;border-radius:10px;cursor:pointer" onclick="nextQuiz()">下一题 ▶</button>
+    </div>`;
+  speak(CHARS[ans].py);
+}
+function answerQuiz(c,el){
+  const fb=document.getElementById('qfb');
+  if(c===qCur.ans){
+    el.classList.add('ok');
+    fb.innerHTML='<span style="color:var(--dai)">✔ 对了，就是「'+c+'」'+CHARS[c].py+'</span>';
+    document.querySelectorAll('#rvQuiz .opt').forEach(o=>o.onclick=null);
+  }else{
+    el.classList.add('no');
+    fb.innerHTML='<span style="color:var(--seal)">再想想～正确答案是「'+qCur.ans+'」'+CHARS[qCur.ans].py+'</span>';
+    // 标出正确项
+    document.querySelectorAll('#rvQuiz .opt').forEach(o=>{if(o.textContent===qCur.ans)o.classList.add('ok');o.onclick=null;});
+  }
+}
+// 复习：待复习列表（演示：手写温习）
+const REVIEW=['香','佛','河','春','家','福','手','明'];
+document.getElementById('rvList').innerHTML=REVIEW.map(c=>`
+  <div class="review-item">
+    <div class="c serif">${c}</div>
+    <div class="info">${CHARS[c].py} · ${CHARS[c].mean}</div>
+    <div class="act">
+      <button class="y" onclick="alert('请在田字格里手写「${c}」一遍：\n写对→标记温故知新，之后仍安排复习；\n写错→标记“仍需复习”，下次重现。')">认识·手写</button>
+      <button class="n" onclick="alert('已标记「${c}」仍需复习，会提前重现。')">不认识</button>
+    </div>
+  </div>`).join('') + `<div class="tip">复习采用“记不住就多来一次”的间隔法：手写写错立刻重现；写对也不一劳永逸，系统仍会按节奏提醒温习。定时提醒在正式版由平板本地通知实现。</div>`;
+
+document.querySelectorAll('#rvTabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#rvTabs button').forEach(x=>x.classList.toggle('active',x===b));
+  document.getElementById('rvQuiz').style.display=b.dataset.t==='quiz'?'block':'none';
+  document.getElementById('rvList').style.display=b.dataset.t==='list'?'block':'none';
+  if(b.dataset.t==='quiz')nextQuiz();
+});
+// 默认进入复习时载入一题
+nextQuiz();
+
+// 今日/连续（演示，正式版本地持久化）
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+sequenceDiagram
+    %% 晚晴识字 · 关键时序：新课学习 / 智能复习 / 短句阅读
+
+    autonumber
+    participant U as 用户(母亲)
+    participant H as HomeScreen
+    participant A as AppState
+    participant L as LessonScreen
+    participant P as ProgressService
+    participant T as TtsService
+    participant SA as StrokeAnimator
+    participant SD as StrokeData
+    participant PR as PracticeScreen
+    participant R as ReviewService
+    participant V as ReviewScreen
+    participant RD as ReadScreen
+    participant S as Store
+
+    rect rgb(232, 244, 240)
+    note over U,PR: 一、新课学习（LessonScreen → PracticeScreen）
+    U->>H: 点「继续学习 第 N 课」
+    H->>A: progress.unlockedLesson
+    A-->>H: N
+    H->>L: push(LessonScreen, lessonId=N)
+    loop 本课每个字 c（2-3 个）
+        L->>T: speakChar(c)
+        T->>T: _assertChinese 校验（禁止拼音字母）
+        T-->>U: 「饭，米饭，饭」（慢速 rate=0.3）
+        L-->>U: 超大汉字 + 弱拼音 + 写实配图 + 释义
+        U->>T: 再点一次（无限次重复）
+        U->>SA: 点「看笔顺」
+        SA->>SD: strokesOf(c) / mediansOf(c)
+        SD-->>SA: N 笔 SVG path + 中线点列
+        SA-->>U: 逐笔慢速描绘（可重复播放）
+        alt 该字无笔顺数据
+            SA-->>U: 降级：整字渐显 + 笔画名朗读
+        end
+        U->>SA: 点「写一遍」
+        SA-->>U: 田字格 + 半透明范字描红（无判定无评分）
+        L->>P: markLearned(c)
+        P->>P: entries[c] = ProgressEntry(stage=0, firstLearnedDay=今天)
+        P->>S: persist(wq_progress_v1)
+    end
+    L->>PR: 学完 → 进入当堂轻练习
+    loop 每题（听音认字 / 看图认字，2-3 超大选项）
+        PR->>T: speakChar(答案字)
+        PR-->>U: 展示选项（无倒计时）
+        U->>PR: 选择
+        alt 答对
+            PR-->>U: 「对啦」
+        else 答错
+            PR-->>U: 「再试一次哦」（无音效/无红叉/可无限重试/不锁进度）
+        end
+    end
+    PR->>P: advanceLesson(N) → unlockedLesson = N+1
+    P->>S: persist(wq_progress_v1)
+    P->>A: notifyListeners()
+    end
+
+    rect rgb(250, 240, 226)
+    note over U,S: 二、智能复习调度（1/3/7/30 天）
+    U->>H: 打开 App
+    H->>A: init()
+    A->>S: init + 读取 wq_progress_v1 / wq_settings_v1
+    A->>P: load()
+    A->>R: dueToday(progress)
+    R->>P: entries
+    R->>R: 过滤 stage<4 且 (lastReviewDay + intervals[stage]) <= today
+    R-->>A: ['饭','门','钱', ...]
+    A->>A: dueCount = n; notifyListeners()
+    H-->>U: 首页徽标「今天复习 5 个字」
+    U->>V: 进入「复习」
+    V->>R: buildQueue(progress, limit=20)
+    R-->>V: 按 (stage 升序, lastReviewDay 升序) 排序 → 生疏字优先
+    loop 队列逐个
+        V->>T: speakChar(c)
+        V-->>U: 2-3 个超大选项
+        U->>V: 作答
+        V->>R: recordResult(c, ok, progress)
+        alt 答对
+            R->>P: stage = min(stage+1, 4)
+        else 答错
+            R->>P: stage = 1（不回 0、不扣分、不惩罚）
+        end
+        R->>P: lastReviewDay = 今天; reviewCount++
+        P->>S: persist(wq_progress_v1)
+    end
+    V->>A: refreshDue()
+    note over V,U: 「复习专区」可手动选择任意已学字复盘（含已毕业熟字）
+    end
+
+    rect rgb(238, 240, 248)
+    note over U,RD: 三、短句阅读运用（100% 已学字）
+    U->>RD: 进入「读一读」
+    RD->>P: learnedChars / unlockedLesson
+    RD->>RD: kSentences.where(s.minLesson <= unlockedLesson)
+    RD->>RD: 二次校验 s.coveredBy(learnedChars)
+    alt 无可用短句
+        RD-->>U: 正向空态「再学几个字，就能读句子啦」
+    else 有可用短句
+        RD-->>U: 短句卡片（超大字 + 弱拼音）
+        U->>RD: 点「听一句」
+        RD->>T: speakSentence(s.text)（只传汉字）
+        T-->>U: 慢速整句朗读
+    end
+    end

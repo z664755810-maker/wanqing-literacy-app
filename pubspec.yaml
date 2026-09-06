@@ -1,0 +1,61 @@
+name: wanqing_shizi
+description: 晚晴识字 - 中老年零基础识字 App（纯离线安卓，汉字优先、拼音浸润）
+publish_to: 'none'
+version: 1.17.0+21
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+# ⚠️ 红线：禁止新增任何 pub 依赖。状态管理用 ChangeNotifier + 内置 ListenableBuilder。
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_tts: ^4.0.2
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/strokes.json
+    - assets/audio/
+    # v1.16 新增：语速「正常/稍快」档走 assets/audio_norm/（原速 +0% 烤的音频）；
+    # 「慢速」档继续走 assets/audio/（-30% 烤的）。两者文件名 1:1 对应，运行时按档选不同档位。
+    - assets/audio_norm/
+    - assets/images/chars/
+    - assets/images/stories/
+    # ⚠️ Flutter 的目录资源声明**不递归**：assets/images/stories/ 只会收进直接位于
+    # 该目录下的文件（目前只有 .gitkeep）。每个故事的子目录必须单独声明一条，
+    # 否则 APK 里一张配图都没有（阅读器会全部退化成占位框）。
+    - assets/images/stories/havoc/
+    - assets/images/stories/market/
+    - assets/images/stories/nezha/
+    - assets/images/stories/pony/
+    - assets/images/stories/simaguang/
+    - assets/images/stories/whitesnake/
+    # v1.11 新增 21 篇故事（18 寓言 + 3 神话）配图子目录
+    - assets/images/stories/fable_shouzhu/
+    - assets/images/stories/fable_wangyang/
+    - assets/images/stories/fable_yamiao/
+    - assets/images/stories/fable_hujia/
+    - assets/images/stories/fable_kezhou/
+    - assets/images/stories/fable_jingdi/
+    - assets/images/stories/fable_maodun/
+    - assets/images/stories/fable_huashe/
+    - assets/images/stories/fable_zhengren/
+    - assets/images/stories/fable_yegong/
+    - assets/images/stories/fable_lanyu/
+    - assets/images/stories/fable_maidu/
+    - assets/images/stories/fable_saiweng/
+    - assets/images/stories/fable_beigong/
+    - assets/images/stories/fable_wushibu/
+    - assets/images/stories/fable_jiegan/
+    - assets/images/stories/fable_yubang/
+    - assets/images/stories/fable_dongguo/
+    - assets/images/stories/myth_yugong/
+    - assets/images/stories/myth_dayu/
+    - assets/images/stories/myth_niulang/
