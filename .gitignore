@@ -72,7 +72,21 @@ android/gradle/caches/
 /dist/
 
 # 本机脚本产生的临时/诊断产物
+# （Release API 请求/响应含私密 upload_url，不进仓库；注释必须单独成行，Git 不支持行内 #）
 tool/_voice_id_map.txt
+tool/_rel_req.json
+tool/_rel_resp.json
+tool/_rel_patch.json
+tool/_rel_patch_resp.json
+tool/_upload_resp.json
+tool/_upload_url.txt
+tool/__pycache__/
+tool/apksigner_out.txt
+# 声调诊断样本，可由 diag_tone.py 重建
+tool/diag_*.mp3
+tool/verify_*.mp3
+tool/pinyin_*.mp3
+tool/hanzi_*.mp3
 
 # Flutter 生成的 .android 目录（含本机插件 junction，不可移植）
 .android/
